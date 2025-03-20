@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -53,7 +52,6 @@ const Dashboard = () => {
   
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
-      {/* Mobile menu backdrop */}
       {mobileMenuOpen && (
         <div 
           className="fixed inset-0 z-20 bg-black/50 lg:hidden"
@@ -61,20 +59,17 @@ const Dashboard = () => {
         ></div>
       )}
       
-      {/* Sidebar for desktop */}
       <div
         className={`fixed inset-y-0 right-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:z-auto ${
           mobileMenuOpen ? "translate-x-0" : "translate-x-full"
         } ${sidebarOpen ? "lg:w-64" : "lg:w-20"}`}
       >
         <div className="h-full flex flex-col">
-          {/* Sidebar header */}
           <div className={`flex items-center justify-between h-16 px-4 border-b ${!sidebarOpen && "lg:justify-center"}`}>
             <div className={`flex items-center ${!sidebarOpen && "lg:hidden"}`}>
               <span className="text-xl font-bold text-gradient">Nova Pharma</span>
             </div>
             
-            {/* Close button on mobile */}
             <button
               onClick={closeMobileMenu}
               className="p-1 rounded-full text-gray-400 lg:hidden hover:bg-gray-100"
@@ -82,7 +77,6 @@ const Dashboard = () => {
               <X className="h-6 w-6" />
             </button>
             
-            {/* Toggle sidebar button on desktop */}
             <button
               onClick={toggleSidebar}
               className="hidden lg:flex p-1 rounded-full text-gray-400 hover:bg-gray-100"
@@ -95,7 +89,6 @@ const Dashboard = () => {
             </button>
           </div>
           
-          {/* Sidebar menu */}
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="space-y-1 px-2" dir="rtl">
               {menuItems.map((item, index) => (
@@ -117,7 +110,6 @@ const Dashboard = () => {
             </nav>
           </div>
           
-          {/* Sidebar footer */}
           <div className={`p-4 border-t ${!sidebarOpen && "lg:px-2"}`}>
             <button
               className={`flex items-center gap-3 w-full py-2 px-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors ${
@@ -134,14 +126,10 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top navigation */}
         <header className="bg-white shadow-sm z-10">
           <div className="h-16 px-4 flex items-center justify-between">
-            {/* Left side */}
             <div className="flex items-center gap-2">
-              {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="lg:hidden p-2 rounded-md text-gray-400 hover:bg-gray-100"
@@ -149,7 +137,6 @@ const Dashboard = () => {
                 <Menu className="h-6 w-6" />
               </button>
               
-              {/* Search bar */}
               <div className="relative hidden md:block">
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-gray-400" />
@@ -163,9 +150,7 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Right side */}
             <div className="flex items-center gap-4">
-              {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="relative p-2 rounded-full text-gray-400 hover:bg-gray-100">
@@ -173,35 +158,36 @@ const Dashboard = () => {
                     <span className="absolute top-1 left-1 h-2 w-2 rounded-full bg-red-500"></span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80" dir="rtl">
-                  <DropdownMenuLabel>الإشعارات</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {[1, 2, 3].map((i) => (
-                    <DropdownMenuItem key={i} className="py-2 cursor-pointer">
-                      <div className="flex gap-3">
-                        <div className="h-10 w-10 rounded-full bg-nova-100 flex items-center justify-center flex-shrink-0">
-                          <Activity className="h-5 w-5 text-nova-500" />
+                <DropdownMenuContent align="end" className="w-80">
+                  <div dir="rtl">
+                    <DropdownMenuLabel>الإشعارات</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {[1, 2, 3].map((i) => (
+                      <DropdownMenuItem key={i} className="py-2 cursor-pointer">
+                        <div className="flex gap-3">
+                          <div className="h-10 w-10 rounded-full bg-nova-100 flex items-center justify-center flex-shrink-0">
+                            <Activity className="h-5 w-5 text-nova-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">تنبيه مخزون</p>
+                            <p className="text-xs text-gray-500">
+                              الرصيد المتبقي من دواء "باراسيتامول" أقل من الحد الأدنى.
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">منذ 30 دقيقة</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">تنبيه مخزون</p>
-                          <p className="text-xs text-gray-500">
-                            الرصيد المتبقي من دواء "باراسيتامول" أقل من الحد الأدنى.
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">منذ 30 دقيقة</p>
-                        </div>
-                      </div>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="justify-center">
+                      <Link to="#" className="text-sm text-nova-600 hover:underline">
+                        عرض كل الإشعارات
+                      </Link>
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="justify-center">
-                    <Link to="#" className="text-sm text-nova-600 hover:underline">
-                      عرض كل الإشعارات
-                    </Link>
-                  </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {/* User menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center">
@@ -210,42 +196,41 @@ const Dashboard = () => {
                     </div>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56" dir="rtl">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <span className="font-medium">محمد أحمد</span>
-                      <span className="text-xs text-gray-500">admin@example.com</span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="ml-2 h-4 w-4" />
-                    <span>الملف الشخصي</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="ml-2 h-4 w-4" />
-                    <span>الإعدادات</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="ml-2 h-4 w-4" />
-                    <span>تسجيل الخروج</span>
-                  </DropdownMenuItem>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div dir="rtl">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col">
+                        <span className="font-medium">محمد أحمد</span>
+                        <span className="text-xs text-gray-500">admin@example.com</span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="ml-2 h-4 w-4" />
+                      <span>الملف الشخصي</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="ml-2 h-4 w-4" />
+                      <span>الإعدادات</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <LogOut className="ml-2 h-4 w-4" />
+                      <span>تسجيل الخروج</span>
+                    </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
         </header>
         
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          {/* Page header */}
           <div className="mb-8" dir="rtl">
             <h1 className="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
             <p className="text-gray-600 mt-1">مرحباً بك في نظام إدارة صيدليتك!</p>
           </div>
           
-          {/* Dashboard content */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[
               { title: "إجمالي المبيعات", value: "٢٤,٥٠٠ ر.س", change: "+12%", icon: <ShoppingCart className="h-8 w-8 text-white" />, color: "bg-gradient-to-r from-blue-500 to-blue-600" },
@@ -280,7 +265,6 @@ const Dashboard = () => {
             ))}
           </div>
           
-          {/* Inventory section */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
             <div className="p-6 border-b" dir="rtl">
               <div className="flex justify-between items-center">
@@ -351,7 +335,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Recent sales section */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-6 border-b" dir="rtl">
               <div className="flex justify-between items-center">
@@ -387,7 +370,7 @@ const Dashboard = () => {
                   {[
                     { id: "INV-001", customer: "أحمد محمد", date: "05 يونيو 2023", amount: "٥٥٠ ر.س", status: "مكتمل" },
                     { id: "INV-002", customer: "سارة علي", date: "05 يونيو 2023", amount: "١٨٠ ر.س", status: "مكتمل" },
-                    { id: "INV-003", customer: "خالد عبدالله", date: "04 يونيو 2023", amount: "٧٦٥ ر.س", status: "مكتمل" },
+                    { id: "INV-003", customer: "خالد عبدالله", date: "04 يونيو 2023", amount: "٧٥٥ ر.س", status: "مكتمل" },
                     { id: "INV-004", customer: "نورة سعد", date: "04 يونيو 2023", amount: "٣٢٠ ر.س", status: "معلق" },
                     { id: "INV-005", customer: "فهد محمد", date: "03 يونيو 2023", amount: "٤٩٠ ر.س", status: "مكتمل" }
                   ].map((item, index) => (

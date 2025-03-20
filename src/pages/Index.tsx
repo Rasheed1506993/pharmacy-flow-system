@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -6,6 +5,15 @@ import Features from "@/components/Features";
 import Footer from "@/components/Footer";
 import { motion, useAnimation } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+import { 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Facebook, 
+  Twitter, 
+  Instagram, 
+  Linkedin 
+} from "lucide-react";
 
 const SectionTitle = ({ title, subtitle }: { title: string; subtitle: string }) => {
   const controls = useAnimation();
@@ -49,7 +57,6 @@ const SectionTitle = ({ title, subtitle }: { title: string; subtitle: string }) 
 };
 
 const Index = () => {
-  // Handle scroll animations
   useEffect(() => {
     const elements = document.querySelectorAll(".animate-on-scroll");
     

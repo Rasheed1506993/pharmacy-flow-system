@@ -1,11 +1,10 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { 
   BarChart3, 
   ShoppingCart, 
   Smartphone,
-  SyncIcon,
+  RefreshCw,
   Truck,
   ScrollText,
   Pill,
@@ -57,7 +56,7 @@ const featureSections = [
   {
     title: "مزامنة البيانات بين الفروع",
     description: "مزامنة سلسة للبيانات بين مختلف فروع الصيدلية",
-    icon: <SyncIcon className="h-12 w-12 text-nova-500" />,
+    icon: <RefreshCw className="h-12 w-12 text-nova-500" />,
     features: [
       "مزامنة البيانات بين فروع الصيدلية المختلفة",
       "الحصول على تقارير خاصة بكل فرع",
@@ -242,7 +241,7 @@ const Features = () => {
           >
             <div className="mb-4">
               <Languages className="h-12 w-12 mb-4" />
-              <h3 className="text-xl font-bold mb-2">دعم اللغتين العربية والإنجليزية</h3>
+              <h3 className="text-xl font-bold mb-2">دعم اللغتين العربية والإنجل��زية</h3>
               <p className="text-white/90">
                 استمتع بتجربة مستخدم متكاملة مع واجهة متعددة اللغات تناسب جميع المستخدمين وتلبي احتياجاتهم.
               </p>
