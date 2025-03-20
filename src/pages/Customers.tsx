@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -140,10 +139,17 @@ const Customers = () => {
           description: "تم تحديث بيانات العميل بنجاح",
         });
       } else {
-        // إضافة عميل جديد
+        // إضافة عميل جديد - ensure we're passing a valid object with required name
+        const customerData = {
+          name: values.name, // name is required
+          phone: values.phone || null,
+          email: values.email || null,
+          address: values.address || null,
+        };
+        
         const { error } = await supabase
           .from("customers")
-          .insert([values]);
+          .insert([customerData]);
 
         if (error) throw error;
 

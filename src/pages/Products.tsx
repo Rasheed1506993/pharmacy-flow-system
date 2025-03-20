@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -170,10 +169,23 @@ const Products = () => {
           description: "تم تحديث بيانات المنتج بنجاح",
         });
       } else {
-        // إضافة منتج جديد
+        // إضافة منتج جديد - ensure we're passing valid values with required fields
+        const productData = {
+          name: values.name, // required
+          description: values.description || null,
+          barcode: values.barcode || null,
+          category: values.category || null,
+          manufacturer: values.manufacturer || null,
+          price: values.price, // required
+          cost_price: values.cost_price, // required
+          stock_quantity: values.stock_quantity,
+          min_stock_level: values.min_stock_level,
+          expiry_date: values.expiry_date || null,
+        };
+        
         const { error } = await supabase
           .from("products")
-          .insert([values]);
+          .insert([productData]);
 
         if (error) throw error;
 
