@@ -1,23 +1,77 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log({ email, password, rememberMe });
+    
+    if (!email || !password) {
+      setErrorMessage("يرجى إدخال البريد الإلكتروني وكلمة المرور");
+      return;
+    }
+    
+    setIsLoading(true);
+    setErrorMessage("");
+    
+    try {
+      console.log("محاولة تسجيل الدخول:", { email });
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error("خطأ في تسجيل الدخول:", error.message);
+        
+        // عرض رسالة خطأ أكثر ودية للمستخدم
+        if (error.message.includes("Invalid login credentials")) {
+          setErrorMessage("بريد إلكتروني أو كلمة مرور غير صحيحة");
+        } else if (error.message.includes("Email not confirmed")) {
+          setErrorMessage("لم يتم تأكيد البريد الإلكتروني بعد. يرجى التحقق من بريدك الإلكتروني");
+        } else {
+          setErrorMessage(`حدث خطأ أثناء تسجيل الدخول: ${error.message}`);
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "فشل تسجيل الدخول",
+          description: errorMessage || error.message,
+        });
+      } else {
+        console.log("تم تسجيل الدخول بنجاح:", data);
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: "مرحبًا بك في نظام إدارة الصيدلية",
+        });
+        
+        // التوجيه إلى لوحة التحكم بعد تسجيل الدخول الناجح
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("خطأ غير متوقع:", err);
+      setErrorMessage("حدث خطأ غير متوقع أثناء تسجيل الدخول");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -44,6 +98,12 @@ const Login = () => {
               <p className="text-gray-600" dir="rtl">أدخل بيانات حسابك للوصول إلى لوحة التحكم</p>
             </div>
             
+            {errorMessage && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-right" dir="rtl">
+                {errorMessage}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} dir="rtl">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -56,6 +116,7 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="h-12"
+                    disabled={isLoading}
                   />
                 </div>
                 
@@ -75,6 +136,7 @@ const Login = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       className="h-12 pr-10"
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
@@ -91,6 +153,7 @@ const Login = () => {
                     id="remember" 
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    disabled={isLoading}
                   />
                   <Label htmlFor="remember" className="text-sm text-gray-600">تذكرني</Label>
                 </div>
@@ -98,8 +161,9 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full h-12 bg-nova-500 hover:bg-nova-600"
+                  disabled={isLoading}
                 >
-                  تسجيل الدخول
+                  {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
                 </Button>
               </div>
               
