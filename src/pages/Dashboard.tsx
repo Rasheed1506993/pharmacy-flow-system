@@ -43,11 +43,11 @@ const Dashboard = () => {
   
   const menuItems = [
     { icon: <Home className="h-5 w-5" />, label: "الرئيسية", path: "/dashboard" },
-    { icon: <ShoppingCart className="h-5 w-5" />, label: "المبيعات", path: "/dashboard/sales" },
-    { icon: <Package className="h-5 w-5" />, label: "المخزون", path: "/dashboard/inventory" },
-    { icon: <Users className="h-5 w-5" />, label: "العملاء", path: "/dashboard/customers" },
-    { icon: <BarChart3 className="h-5 w-5" />, label: "التقارير", path: "/dashboard/reports" },
-    { icon: <Settings className="h-5 w-5" />, label: "الإعدادات", path: "/dashboard/settings" },
+    { icon: <ShoppingCart className="h-5 w-5" />, label: "المبيعات", path: "/sales" },
+    { icon: <Package className="h-5 w-5" />, label: "المخزون", path: "/inventory" },
+    { icon: <Users className="h-5 w-5" />, label: "العملاء", path: "/customers" },
+    { icon: <BarChart3 className="h-5 w-5" />, label: "التقارير", path: "/reports" },
+    { icon: <Settings className="h-5 w-5" />, label: "الإعدادات", path: "/settings" },
   ];
   
   return (
