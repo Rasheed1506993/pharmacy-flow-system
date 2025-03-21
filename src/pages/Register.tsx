@@ -17,12 +17,14 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Register = () => {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -43,6 +45,8 @@ const Register = () => {
   
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // عند تغيير أي حقل، نزيل رسالة الخطأ إن وجدت
+    if (errorMessage) setErrorMessage(null);
   };
   
   const handleNext = () => {
@@ -89,6 +93,8 @@ const Register = () => {
   };
   
   const handlePrevious = () => {
+    // إزالة رسائل الخطأ عند الرجوع للخطوة السابقة
+    if (errorMessage) setErrorMessage(null);
     if (step > 1) setStep(step - 1);
   };
   
@@ -106,6 +112,18 @@ const Register = () => {
     
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
+      
+      console.log("بدء عملية إنشاء الحساب...");
+      console.log("بيانات الإدخال:", {
+        email: formData.email,
+        password: formData.password,
+        metadata: {
+          pharmacy_name: formData.pharmacyName,
+          owner_name: formData.ownerName,
+          phone: formData.phone
+        }
+      });
       
       // 1. إنشاء حساب المستخدم
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -120,53 +138,84 @@ const Register = () => {
         }
       });
       
-      if (authError) throw authError;
+      console.log("نتيجة إنشاء الحساب:", { authData, authError });
       
-      if (authData?.user) {
-        // 2. إنشاء ملف شخصي للصيدلية
-        const { error: profileError } = await supabase
-          .from('pharmacy_profiles')
-          .insert([
-            {
-              user_id: authData.user.id,
-              pharmacy_name: formData.pharmacyName,
-              owner_name: formData.ownerName,
-              license_number: formData.licenseNumber,
-              address: formData.address,
-              city: formData.city,
-              phone: formData.phone,
-              employee_count: parseInt(formData.employeeCount) || 0
-            }
-          ]);
+      if (authError) {
+        console.error("خطأ في إنشاء الحساب:", authError);
         
-        if (profileError) throw profileError;
+        // عرض رسالة خطأ مناسبة بناءً على نوع الخطأ
+        if (authError.message.includes("already registered")) {
+          setErrorMessage("البريد الإلكتروني مسجل بالفعل. الرجاء استخدام بريد إلكتروني آخر أو تسجيل الدخول.");
+        } else if (authError.message.includes("Email signups are disabled")) {
+          setErrorMessage("تسجيل المستخدمين بالبريد الإلكتروني معطل حاليًا. الرجاء الاتصال بالمسؤول.");
+        } else if (authError.message.includes("Password should be")) {
+          setErrorMessage("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
+        } else {
+          setErrorMessage(`خطأ في إنشاء الحساب: ${authError.message}`);
+        }
+        return;
+      }
+      
+      if (!authData?.user?.id) {
+        console.error("لم يتم إنشاء المستخدم بشكل صحيح:", authData);
+        setErrorMessage("حدث خطأ أثناء إنشاء الحساب. الرجاء المحاولة مرة أخرى.");
+        return;
+      }
+      
+      console.log("تم إنشاء الحساب بنجاح، جاري إنشاء ملف الصيدلية...");
+      
+      // 2. إنشاء ملف شخصي للصيدلية
+      const { error: profileError } = await supabase
+        .from('pharmacy_profiles')
+        .insert([
+          {
+            user_id: authData.user.id,
+            pharmacy_name: formData.pharmacyName,
+            owner_name: formData.ownerName,
+            license_number: formData.licenseNumber,
+            address: formData.address,
+            city: formData.city,
+            phone: formData.phone,
+            employee_count: parseInt(formData.employeeCount) || 0
+          }
+        ]);
+      
+      console.log("نتيجة إنشاء ملف الصيدلية:", { profileError });
+      
+      if (profileError) {
+        console.error("خطأ في إنشاء ملف الصيدلية:", profileError);
         
-        toast({
-          title: "تم إنشاء الحساب بنجاح",
-          description: "تم إنشاء حساب الصيدلية بنجاح، يمكنك الآن تسجيل الدخول.",
-        });
-        
-        // تسجيل الخروج بعد التسجيل (نظرًا لأن التحقق من البريد الإلكتروني قد يكون مطلوبًا)
+        // مسح المستخدم إذا فشل إنشاء الملف الشخصي
         await supabase.auth.signOut();
         
-        // الانتقال إلى صفحة تسجيل الدخول
-        navigate('/login');
+        // عرض رسالة خطأ مناسبة
+        if (profileError.message.includes("duplicate key")) {
+          setErrorMessage("ملف الصيدلية موجود بالفعل.");
+        } else if (profileError.message.includes("violates row level security")) {
+          setErrorMessage("خطأ في صلاحيات الوصول. الرجاء تسجيل الدخول أولاً.");
+        } else {
+          setErrorMessage(`خطأ في إنشاء ملف الصيدلية: ${profileError.message}`);
+        }
+        return;
       }
-    } catch (error: any) {
-      console.error('Error during signup:', error);
-      let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
       
-      if (error.message.includes("duplicate key")) {
-        errorMessage = "البريد الإلكتروني مسجل بالفعل";
-      } else if (error.message.includes("Password should be")) {
-        errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-      }
+      console.log("تم إنشاء ملف الصيدلية بنجاح!");
       
       toast({
-        variant: "destructive",
-        title: "خطأ في إنشاء الحساب",
-        description: errorMessage,
+        title: "تم إنشاء الحساب بنجاح",
+        description: "تم إنشاء حساب الصيدلية بنجاح، يمكنك الآن تسجيل الدخول.",
       });
+      
+      // تسجيل الخروج بعد التسجيل (نظرًا لأن التحقق من البريد الإلكتروني قد يكون مطلوبًا)
+      await supabase.auth.signOut();
+      
+      // الانتقال إلى صفحة تسجيل الدخول
+      navigate('/login');
+      
+    } catch (error: any) {
+      console.error('خطأ غير متوقع أثناء التسجيل:', error);
+      
+      setErrorMessage(`حدث خطأ غير متوقع أثناء إنشاء الحساب: ${error.message || "خطأ غير معروف"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -253,6 +302,14 @@ const Register = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent>
+              {/* عرض رسالة الخطأ إذا وجدت */}
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4" dir="rtl">
+                  <AlertTitle>خطأ في إنشاء الحساب</AlertTitle>
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+              
               <AnimatePresence mode="wait">
                 <motion.div
                   key={step}

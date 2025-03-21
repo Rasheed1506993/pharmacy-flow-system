@@ -39,6 +39,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacy_profiles: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          employee_count: number | null
+          id: string
+          license_number: string
+          owner_name: string
+          pharmacy_name: string
+          phone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          employee_count?: number | null
+          id?: string
+          license_number: string
+          owner_name: string
+          pharmacy_name: string
+          phone: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          employee_count?: number | null
+          id?: string
+          license_number?: string
+          owner_name?: string
+          pharmacy_name?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           barcode: string | null
