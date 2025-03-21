@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,31 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
   
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log("صفحة تسجيل الدخول تم تحميلها");
+    // التحقق من حالة الجلسة الحالية
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("حالة الجلسة:", session);
+      // إذا كان المستخدم مسجل الدخول، يتم توجيهه إلى لوحة التحكم
+      if (session) {
+        console.log("المستخدم مسجل الدخول بالفعل، توجيه إلى لوحة التحكم");
+        navigate("/dashboard");
+      }
+    });
+  }, [navigate]);
+
+  // معالج تغيير البريد الإلكتروني
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("تغيير البريد الإلكتروني:", e.target.value);
+    setEmail(e.target.value);
+  };
+
+  // معالج تغيير كلمة المرور
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("تغيير كلمة المرور");
+    setPassword(e.target.value);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,9 +138,9 @@ const Login = () => {
                     type="email"
                     placeholder="أدخل بريدك الإلكتروني"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
                     required
-                    className="h-12"
+                    className="h-12 text-right"
                     disabled={isLoading}
                   />
                 </div>
@@ -133,9 +158,9 @@ const Login = () => {
                       type={showPassword ? "text" : "password"}
                       placeholder="أدخل كلمة المرور"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={handlePasswordChange}
                       required
-                      className="h-12 pr-10"
+                      className="h-12 text-right pr-3 pl-10"
                       disabled={isLoading}
                     />
                     <button
