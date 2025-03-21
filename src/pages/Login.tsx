@@ -142,6 +142,7 @@ const Login = () => {
                     required
                     className="h-12 text-right"
                     disabled={isLoading}
+                    dir="rtl"
                   />
                 </div>
                 
@@ -162,6 +163,7 @@ const Login = () => {
                       required
                       className="h-12 text-right pr-3 pl-10"
                       disabled={isLoading}
+                      dir="rtl"
                     />
                     <button
                       type="button"
