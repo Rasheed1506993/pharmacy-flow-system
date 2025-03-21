@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const Register = () => {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Form data
   const [formData, setFormData] = useState({
@@ -41,6 +46,45 @@ const Register = () => {
   };
   
   const handleNext = () => {
+    // التحقق من صحة البيانات قبل الانتقال للخطوة التالية
+    if (step === 1) {
+      if (!formData.pharmacyName || !formData.ownerName || !formData.licenseNumber || !formData.address || !formData.city) {
+        toast({
+          variant: "destructive",
+          title: "خطأ في البيانات",
+          description: "الرجاء إكمال جميع الحقول المطلوبة",
+        });
+        return;
+      }
+    } else if (step === 2) {
+      if (!formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+        toast({
+          variant: "destructive",
+          title: "خطأ في البيانات",
+          description: "الرجاء إكمال جميع الحقول المطلوبة",
+        });
+        return;
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        toast({
+          variant: "destructive",
+          title: "خطأ في كلمة المرور",
+          description: "كلمتا المرور غير متطابقتين",
+        });
+        return;
+      }
+      
+      if (formData.password.length < 6) {
+        toast({
+          variant: "destructive",
+          title: "خطأ في كلمة المرور",
+          description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+        });
+        return;
+      }
+    }
+    
     if (step < 3) setStep(step + 1);
   };
   
@@ -48,10 +92,84 @@ const Register = () => {
     if (step > 1) setStep(step - 1);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-    // Handle registration logic
+    
+    if (!formData.acceptTerms) {
+      toast({
+        variant: "destructive",
+        title: "خطأ في البيانات",
+        description: "يجب الموافقة على شروط الاستخدام وسياسة الخصوصية",
+      });
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      // 1. إنشاء حساب المستخدم
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            pharmacy_name: formData.pharmacyName,
+            owner_name: formData.ownerName,
+            phone: formData.phone,
+          }
+        }
+      });
+      
+      if (authError) throw authError;
+      
+      if (authData?.user) {
+        // 2. إنشاء ملف شخصي للصيدلية
+        const { error: profileError } = await supabase
+          .from('pharmacy_profiles')
+          .insert([
+            {
+              user_id: authData.user.id,
+              pharmacy_name: formData.pharmacyName,
+              owner_name: formData.ownerName,
+              license_number: formData.licenseNumber,
+              address: formData.address,
+              city: formData.city,
+              phone: formData.phone,
+              employee_count: parseInt(formData.employeeCount) || 0
+            }
+          ]);
+        
+        if (profileError) throw profileError;
+        
+        toast({
+          title: "تم إنشاء الحساب بنجاح",
+          description: "تم إنشاء حساب الصيدلية بنجاح، يمكنك الآن تسجيل الدخول.",
+        });
+        
+        // تسجيل الخروج بعد التسجيل (نظرًا لأن التحقق من البريد الإلكتروني قد يكون مطلوبًا)
+        await supabase.auth.signOut();
+        
+        // الانتقال إلى صفحة تسجيل الدخول
+        navigate('/login');
+      }
+    } catch (error: any) {
+      console.error('Error during signup:', error);
+      let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
+      
+      if (error.message.includes("duplicate key")) {
+        errorMessage = "البريد الإلكتروني مسجل بالفعل";
+      } else if (error.message.includes("Password should be")) {
+        errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+      }
+      
+      toast({
+        variant: "destructive",
+        title: "خطأ في إنشاء الحساب",
+        description: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   // Step indicators
@@ -360,6 +478,7 @@ const Register = () => {
                     variant="outline"
                     className="w-full sm:w-auto"
                     onClick={handlePrevious}
+                    disabled={isSubmitting}
                   >
                     <ChevronRight className="h-4 w-4 ml-2" />
                     السابق
@@ -381,9 +500,9 @@ const Register = () => {
                   <Button
                     type="submit"
                     className="w-full sm:w-auto bg-nova-500 hover:bg-nova-600"
-                    disabled={!formData.acceptTerms}
+                    disabled={!formData.acceptTerms || isSubmitting}
                   >
-                    إنشاء الحساب
+                    {isSubmitting ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
                   </Button>
                 )}
               </div>
