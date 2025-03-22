@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Settings as SettingsIcon,
@@ -28,9 +27,120 @@ import {
 import { Link } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
+import { usePharmacyProfile } from "@/hooks/usePharmacyProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { PharmacyProfileFormData, settingsService } from "@/services/settingsService";
+import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
+  const { pharmacyProfile, loading: profileLoading } = usePharmacyProfile();
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+  
+  const [pharmacyData, setPharmacyData] = useState<PharmacyProfileFormData>({
+    pharmacy_name: '',
+    owner_name: '',
+    license_number: '',
+    phone: '',
+    address: '',
+    city: '',
+    employee_count: 1
+  });
+  
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setEmail(user.email || '');
+          setName(user.user_metadata?.name || '');
+          setRole(user.user_metadata?.role || 'مدير الصيدلية');
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+    
+    loadUserProfile();
+  }, []);
+  
+  useEffect(() => {
+    if (pharmacyProfile) {
+      setPharmacyData({
+        pharmacy_name: pharmacyProfile.pharmacy_name,
+        owner_name: pharmacyProfile.owner_name,
+        license_number: pharmacyProfile.license_number,
+        phone: pharmacyProfile.phone,
+        address: pharmacyProfile.address,
+        city: pharmacyProfile.city,
+        employee_count: pharmacyProfile.employee_count || 1
+      });
+    }
+  }, [pharmacyProfile]);
+  
+  const handlePharmacyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setPharmacyData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleSavePharmacyProfile = async () => {
+    if (!pharmacyProfile) return;
+    
+    try {
+      setIsLoading(true);
+      await settingsService.updatePharmacyProfile(pharmacyProfile.id, pharmacyData);
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم تحديث بيانات الصيدلية بنجاح",
+      });
+    } catch (error) {
+      console.error('Error saving pharmacy profile:', error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "حدث خطأ أثناء تحديث بيانات الصيدلية",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleSaveUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      await supabase.auth.updateUser({
+        data: {
+          name,
+          role
+        }
+      });
+      
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم تحديث البيانات الشخصية بنجاح",
+      });
+    } catch (error) {
+      console.error('Error saving user profile:', error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "حدث خطأ أثناء تحديث البيانات الشخصية",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
@@ -110,7 +220,8 @@ const Settings = () => {
                             <input
                               id="name"
                               type="text"
-                              defaultValue="محمد أحمد"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
                               dir="rtl"
                             />
@@ -123,7 +234,8 @@ const Settings = () => {
                             <input
                               id="email"
                               type="email"
-                              defaultValue="admin@example.com"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
                               dir="rtl"
                             />
@@ -136,7 +248,8 @@ const Settings = () => {
                             <input
                               id="phone"
                               type="tel"
-                              defaultValue="05xxxxxxxx"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
                               dir="rtl"
                             />
@@ -149,7 +262,8 @@ const Settings = () => {
                             <input
                               id="role"
                               type="text"
-                              defaultValue="مدير الصيدلية"
+                              value={role}
+                              onChange={(e) => setRole(e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
                               dir="rtl"
                             />
@@ -162,16 +276,21 @@ const Settings = () => {
                           </label>
                           <textarea
                             id="bio"
-                            defaultValue="مدير صيدلية ذو خبرة في إدارة الصيدليات وضمان جودة الخدمة للعملاء."
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
                             className="w-full p-2 border border-gray-300 rounded-md h-24 focus:outline-none focus:ring-2 focus:ring-nova-500"
                             dir="rtl"
                           />
                         </div>
                         
                         <div className="flex justify-end">
-                          <Button className="flex items-center gap-2">
+                          <Button 
+                            className="flex items-center gap-2"
+                            onClick={handleSaveUserProfile}
+                            disabled={isLoading}
+                          >
                             <Save className="h-4 w-4" />
-                            <span>حفظ التغييرات</span>
+                            <span>{isLoading ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}</span>
                           </Button>
                         </div>
                       </div>
@@ -186,78 +305,128 @@ const Settings = () => {
                           </p>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-1">
-                            <label htmlFor="pharmacy-name" className="text-sm font-medium">
-                              اسم الصيدلية
-                            </label>
-                            <input
-                              id="pharmacy-name"
-                              type="text"
-                              defaultValue="صيدلية نوفا"
-                              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
-                              dir="rtl"
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label htmlFor="license" className="text-sm font-medium">
-                              رقم الترخيص
-                            </label>
-                            <input
-                              id="license"
-                              type="text"
-                              defaultValue="PHM-12345"
-                              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
-                              dir="rtl"
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label htmlFor="pharmacy-phone" className="text-sm font-medium">
-                              رقم الهاتف
-                            </label>
-                            <input
-                              id="pharmacy-phone"
-                              type="tel"
-                              defaultValue="05xxxxxxxx"
-                              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
-                              dir="rtl"
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label htmlFor="pharmacy-email" className="text-sm font-medium">
-                              البريد الإلكتروني
-                            </label>
-                            <input
-                              id="pharmacy-email"
-                              type="email"
-                              defaultValue="contact@novapharma.com"
-                              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
-                              dir="rtl"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <label htmlFor="address" className="text-sm font-medium">
-                            العنوان
-                          </label>
-                          <textarea
-                            id="address"
-                            defaultValue="حي النزهة، شارع الملك فهد، الرياض، المملكة العربية السعودية"
-                            className="w-full p-2 border border-gray-300 rounded-md h-24 focus:outline-none focus:ring-2 focus:ring-nova-500"
-                            dir="rtl"
-                          />
-                        </div>
-                        
-                        <div className="flex justify-end">
-                          <Button className="flex items-center gap-2">
-                            <Save className="h-4 w-4" />
-                            <span>حفظ التغييرات</span>
-                          </Button>
-                        </div>
+                        {profileLoading ? (
+                          <div className="text-center py-10">جاري تحميل البيانات...</div>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-1">
+                                <label htmlFor="pharmacy_name" className="text-sm font-medium">
+                                  اسم الصيدلية
+                                </label>
+                                <input
+                                  id="pharmacy_name"
+                                  name="pharmacy_name"
+                                  type="text"
+                                  value={pharmacyData.pharmacy_name}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label htmlFor="license_number" className="text-sm font-medium">
+                                  رقم الترخيص
+                                </label>
+                                <input
+                                  id="license_number"
+                                  name="license_number"
+                                  type="text"
+                                  value={pharmacyData.license_number}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label htmlFor="pharmacy_phone" className="text-sm font-medium">
+                                  رقم الهاتف
+                                </label>
+                                <input
+                                  id="pharmacy_phone"
+                                  name="phone"
+                                  type="tel"
+                                  value={pharmacyData.phone}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label htmlFor="city" className="text-sm font-medium">
+                                  المدينة
+                                </label>
+                                <input
+                                  id="city"
+                                  name="city"
+                                  type="text"
+                                  value={pharmacyData.city}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label htmlFor="owner_name" className="text-sm font-medium">
+                                  اسم المالك
+                                </label>
+                                <input
+                                  id="owner_name"
+                                  name="owner_name"
+                                  type="text"
+                                  value={pharmacyData.owner_name}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label htmlFor="employee_count" className="text-sm font-medium">
+                                  عدد الموظفين
+                                </label>
+                                <input
+                                  id="employee_count"
+                                  name="employee_count"
+                                  type="number"
+                                  value={pharmacyData.employee_count}
+                                  onChange={handlePharmacyChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                  dir="rtl"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <label htmlFor="address" className="text-sm font-medium">
+                                العنوان
+                              </label>
+                              <textarea
+                                id="address"
+                                name="address"
+                                value={pharmacyData.address}
+                                onChange={handlePharmacyChange}
+                                className="w-full p-2 border border-gray-300 rounded-md h-24 focus:outline-none focus:ring-2 focus:ring-nova-500"
+                                dir="rtl"
+                              />
+                            </div>
+                            
+                            <div className="flex justify-end">
+                              <Button 
+                                className="flex items-center gap-2"
+                                onClick={handleSavePharmacyProfile}
+                                disabled={isLoading || !pharmacyProfile}
+                              >
+                                <Save className="h-4 w-4" />
+                                <span>{isLoading ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}</span>
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </TabsContent>
                     
@@ -343,7 +512,7 @@ const Settings = () => {
                         </div>
                       </div>
                     </TabsContent>
-
+                    
                     <TabsContent value="team" className="mt-0 border-0 p-0">
                       <div className="space-y-6">
                         <div>

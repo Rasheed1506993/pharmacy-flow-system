@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Search,
@@ -36,103 +36,84 @@ import {
 import { Link } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
+import { supabase } from "@/integrations/supabase/client";
+import { usePharmacyProfile } from "@/hooks/usePharmacyProfile";
+import { Tables } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 const Inventory = () => {
   const [activeTab, setActiveTab] = useState("all");
+  const [products, setProducts] = useState<Tables<'products'>[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { pharmacyProfile, loading: profileLoading } = usePharmacyProfile();
+  const { toast } = useToast();
   
-  // Sample inventory data
-  const inventoryData = [
-    { 
-      id: "PRD-001", 
-      name: "باراسيتامول 500mg", 
-      category: "مسكنات", 
-      remaining: 15, 
-      min: 20, 
-      price: "١٥ ر.س",
-      expiryDate: "2023-12-01",
-      status: "منخفض" 
-    },
-    { 
-      id: "PRD-002", 
-      name: "أموكسيسيلين 250mg", 
-      category: "مضادات حيوية", 
-      remaining: 8, 
-      min: 15, 
-      price: "٢٥ ر.س",
-      expiryDate: "2023-11-15",
-      status: "منخفض جداً" 
-    },
-    { 
-      id: "PRD-003", 
-      name: "هيدروكورتيزون 1%", 
-      category: "كريمات", 
-      remaining: 5, 
-      min: 10, 
-      price: "٣٠ ر.س",
-      expiryDate: "2023-10-30",
-      status: "منخفض جداً" 
-    },
-    { 
-      id: "PRD-004", 
-      name: "سيتريزين 10mg", 
-      category: "مضادات الحساسية", 
-      remaining: 12, 
-      min: 15, 
-      price: "١٨ ر.س",
-      expiryDate: "2024-01-15", 
-      status: "منخفض" 
-    },
-    { 
-      id: "PRD-005", 
-      name: "أتورفاستاتين 20mg", 
-      category: "خافضات الكوليسترول", 
-      remaining: 18, 
-      min: 20, 
-      price: "٥٠ ر.س",
-      expiryDate: "2023-12-20",
-      status: "منخفض" 
-    },
-    { 
-      id: "PRD-006", 
-      name: "إيبوبروفين 400mg", 
-      category: "مسكنات", 
-      remaining: 45, 
-      min: 20, 
-      price: "١٢ ر.س",
-      expiryDate: "2024-02-28",
-      status: "متوفر" 
-    },
-    { 
-      id: "PRD-007", 
-      name: "ألبيوتيرول بخاخ", 
-      category: "الربو", 
-      remaining: 25, 
-      min: 10, 
-      price: "٦٠ ر.س",
-      expiryDate: "2023-11-30",
-      status: "متوفر" 
-    }
-  ];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (profileLoading || !pharmacyProfile) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Fetch products data for this pharmacy
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('pharmacy_id', pharmacyProfile.id);
+          
+        if (error) throw error;
+        
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching products data:', error);
+        toast({
+          title: "خطأ في جلب البيانات",
+          description: "حدث خطأ أثناء جلب بيانات المنتجات",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, [pharmacyProfile, profileLoading, toast]);
   
-  // Filter inventory based on active tab
-  const filteredInventory = inventoryData.filter(item => {
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return `${amount.toLocaleString('ar-SA')} ر.س`;
+  };
+  
+  // Calculate stock status
+  const getStockStatus = (quantity: number, minLevel: number) => {
+    if (quantity <= 0) return { status: "نفذ", className: "bg-red-100 text-red-800" };
+    if (quantity < minLevel * 0.5) return { status: "منخفض جداً", className: "bg-red-100 text-red-800" };
+    if (quantity < minLevel) return { status: "منخفض", className: "bg-yellow-100 text-yellow-800" };
+    return { status: "متوفر", className: "bg-green-100 text-green-800" };
+  };
+  
+  // Filter products based on active tab
+  const filteredProducts = products.filter(product => {
+    const status = getStockStatus(product.stock_quantity, product.min_stock_level);
     if (activeTab === "all") return true;
-    if (activeTab === "available") return item.status === "متوفر";
-    if (activeTab === "low") return item.status === "منخفض";
-    if (activeTab === "veryLow") return item.status === "منخفض جداً";
+    if (activeTab === "available") return status.status === "متوفر";
+    if (activeTab === "low") return status.status === "منخفض";
+    if (activeTab === "veryLow") return status.status === "منخفض جداً" || status.status === "نفذ";
     return true;
   });
-
+  
   // Calculate statistics
-  const totalProducts = inventoryData.length;
-  const lowStockProducts = inventoryData.filter(item => 
-    item.status === "منخفض" || item.status === "منخفض جداً").length;
-  const expiringProducts = inventoryData.filter(item => {
-    const expiryDate = new Date(item.expiryDate);
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(product => 
+    product.stock_quantity < product.min_stock_level).length;
+  
+  const expiringProducts = products.filter(product => {
+    if (!product.expiry_date) return false;
+    const expiryDate = new Date(product.expiry_date);
     const today = new Date();
     const diffTime = expiryDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 30;
+    return diffDays <= 30 && diffDays > 0;
   }).length;
   
   return (
@@ -249,53 +230,60 @@ const Inventory = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInventory.length === 0 ? (
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-10 text-gray-500">
+                            جاري تحميل البيانات...
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredProducts.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-10 text-gray-500">
                             لا توجد منتجات مطابقة للتصفية المحددة
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredInventory.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{item.id}</TableCell>
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell>{item.category}</TableCell>
-                            <TableCell>{item.remaining}</TableCell>
-                            <TableCell>{item.min}</TableCell>
-                            <TableCell>{item.price}</TableCell>
-                            <TableCell>
-                              {new Date(item.expiryDate).toLocaleDateString('ar-SA')}
-                              {new Date(item.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && (
-                                <AlertTriangle className="h-4 w-4 text-red-500 inline ml-1" />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                item.status === "متوفر" 
-                                  ? "bg-green-100 text-green-800"
-                                  : item.status === "منخفض"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}>
-                                {item.status}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye text-gray-600"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil text-gray-600"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-cart text-gray-600"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        filteredProducts.map((product, index) => {
+                          const stockStatus = getStockStatus(product.stock_quantity, product.min_stock_level);
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell className="font-medium">{product.barcode || `PRD-${String(index + 1).padStart(3, '0')}`}</TableCell>
+                              <TableCell>{product.name}</TableCell>
+                              <TableCell>{product.category || "-"}</TableCell>
+                              <TableCell>{product.stock_quantity}</TableCell>
+                              <TableCell>{product.min_stock_level}</TableCell>
+                              <TableCell>{formatCurrency(product.price)}</TableCell>
+                              <TableCell>
+                                {product.expiry_date ? (
+                                  <>
+                                    {new Date(product.expiry_date).toLocaleDateString('ar-SA')}
+                                    {new Date(product.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && (
+                                      <AlertTriangle className="h-4 w-4 text-red-500 inline mr-1" />
+                                    )}
+                                  </>
+                                ) : "-"}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${stockStatus.className}`}>
+                                  {stockStatus.status}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye text-gray-600"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil text-gray-600"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-cart text-gray-600"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -304,10 +292,12 @@ const Inventory = () => {
             </div>
             
             <div className="p-6 flex items-center justify-between border-t" dir="rtl">
-              <div className="text-sm text-gray-500">عرض 1-7 من 7 منتجات</div>
+              <div className="text-sm text-gray-500">
+                عرض {filteredProducts.length > 0 ? `1-${filteredProducts.length}` : '0'} من {products.length} منتجات
+              </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>السابق</Button>
-                <Button variant="outline" size="sm" disabled>التالي</Button>
+                <Button variant="outline" size="sm" disabled={filteredProducts.length === 0}>السابق</Button>
+                <Button variant="outline" size="sm" disabled={filteredProducts.length === 0}>التالي</Button>
               </div>
             </div>
           </div>

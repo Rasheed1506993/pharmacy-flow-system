@@ -1,22 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
-  Layout, 
-  Menu,
-  Home,
-  ShoppingCart,
-  Package,
-  Users,
-  BarChart3,
-  Settings,
-  LogOut,
-  ChevronRight,
-  ChevronLeft,
   Search,
   Bell,
-  User,
-  X,
   Plus,
   Filter,
   Calendar,
@@ -24,14 +11,6 @@ import {
   ArrowUpDown
 } from "lucide-react";
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCaption,
@@ -49,76 +28,88 @@ import {
 import { Link } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
+import { supabase } from "@/integrations/supabase/client";
+import { usePharmacyProfile } from "@/hooks/usePharmacyProfile";
+import { Tables } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 const Sales = () => {
   const [activeTab, setActiveTab] = useState("all");
+  const [salesData, setSalesData] = useState<Tables<'sales'>[]>([]);
+  const [customersData, setCustomersData] = useState<Tables<'customers'>[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { pharmacyProfile, loading: profileLoading } = usePharmacyProfile();
+  const { toast } = useToast();
   
-  // Sample sales data
-  const salesData = [
-    { 
-      id: "INV-001", 
-      customer: "أحمد محمد", 
-      date: "05 يونيو 2023", 
-      amount: "٥٥٠ ر.س", 
-      status: "مكتمل",
-      items: 5
-    },
-    { 
-      id: "INV-002", 
-      customer: "سارة علي", 
-      date: "05 يونيو 2023", 
-      amount: "١٨٠ ر.س", 
-      status: "مكتمل",
-      items: 2
-    },
-    { 
-      id: "INV-003", 
-      customer: "خالد عبدالله", 
-      date: "04 يونيو 2023", 
-      amount: "٧٥٥ ر.س", 
-      status: "مكتمل",
-      items: 7
-    },
-    { 
-      id: "INV-004", 
-      customer: "نورة سعد", 
-      date: "04 يونيو 2023", 
-      amount: "٣٢٠ ر.س", 
-      status: "معلق",
-      items: 3
-    },
-    { 
-      id: "INV-005", 
-      customer: "فهد محمد", 
-      date: "03 يونيو 2023", 
-      amount: "٤٩٠ ر.س", 
-      status: "مكتمل",
-      items: 4
-    },
-    { 
-      id: "INV-006", 
-      customer: "ريم أحمد", 
-      date: "02 يونيو 2023", 
-      amount: "٢٧٠ ر.س", 
-      status: "ملغي",
-      items: 2
-    },
-    { 
-      id: "INV-007", 
-      customer: "عبدالله خالد", 
-      date: "01 يونيو 2023", 
-      amount: "٨٩٠ ر.س", 
-      status: "مكتمل",
-      items: 6
-    }
-  ];
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      if (profileLoading || !pharmacyProfile) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Fetch sales data for this pharmacy
+        const { data: sales, error: salesError } = await supabase
+          .from('sales')
+          .select('*')
+          .eq('pharmacy_id', pharmacyProfile.id)
+          .order('sale_date', { ascending: false });
+          
+        if (salesError) throw salesError;
+        
+        // Fetch customers data to map customer names
+        const { data: customers, error: customersError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('pharmacy_id', pharmacyProfile.id);
+          
+        if (customersError) throw customersError;
+        
+        setSalesData(sales || []);
+        setCustomersData(customers || []);
+      } catch (error) {
+        console.error('Error fetching sales data:', error);
+        toast({
+          title: "خطأ في جلب البيانات",
+          description: "حدث خطأ أثناء جلب بيانات المبيعات",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchSalesData();
+  }, [pharmacyProfile, profileLoading, toast]);
+  
+  // Get customer name by ID
+  const getCustomerName = (customerId: string | null) => {
+    if (!customerId) return "عميل غير مسجل";
+    const customer = customersData.find(c => c.id === customerId);
+    return customer ? customer.name : "عميل غير مسجل";
+  };
+  
+  // Format date to Arabic format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('ar-SA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  };
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return `${amount.toLocaleString('ar-SA')} ر.س`;
+  };
   
   // Filter sales based on active tab
   const filteredSales = salesData.filter(sale => {
     if (activeTab === "all") return true;
-    if (activeTab === "completed") return sale.status === "مكتمل";
-    if (activeTab === "pending") return sale.status === "معلق";
-    if (activeTab === "canceled") return sale.status === "ملغي";
+    if (activeTab === "completed") return sale.payment_status === "مكتمل";
+    if (activeTab === "pending") return sale.payment_status === "معلق";
+    if (activeTab === "canceled") return sale.payment_status === "ملغي";
     return true;
   });
   
@@ -202,29 +193,39 @@ const Sales = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSales.length === 0 ? (
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-10 text-gray-500">
+                            جاري تحميل البيانات...
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredSales.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-10 text-gray-500">
                             لا توجد مبيعات مطابقة للتصفية المحددة
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredSales.map((sale, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{sale.id}</TableCell>
-                            <TableCell>{sale.customer}</TableCell>
-                            <TableCell>{sale.date}</TableCell>
-                            <TableCell>{sale.items} منتجات</TableCell>
-                            <TableCell>{sale.amount}</TableCell>
+                        filteredSales.map((sale) => (
+                          <TableRow key={sale.id}>
+                            <TableCell className="font-medium">{sale.invoice_number}</TableCell>
+                            <TableCell>{getCustomerName(sale.customer_id)}</TableCell>
+                            <TableCell>{formatDate(sale.sale_date)}</TableCell>
+                            <TableCell>
+                              <Button variant="link" size="sm" className="h-8 p-0 text-nova-600">
+                                عرض المنتجات
+                              </Button>
+                            </TableCell>
+                            <TableCell>{formatCurrency(sale.final_amount)}</TableCell>
                             <TableCell>
                               <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                sale.status === "مكتمل" 
+                                sale.payment_status === "مكتمل" 
                                   ? "bg-green-100 text-green-800"
-                                  : sale.status === "معلق"
+                                  : sale.payment_status === "معلق"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
                               }`}>
-                                {sale.status}
+                                {sale.payment_status || "مكتمل"}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -250,10 +251,12 @@ const Sales = () => {
             </div>
             
             <div className="p-6 flex items-center justify-between border-t" dir="rtl">
-              <div className="text-sm text-gray-500">عرض 1-7 من 7 فواتير</div>
+              <div className="text-sm text-gray-500">
+                عرض {filteredSales.length > 0 ? `1-${filteredSales.length}` : '0'} من {salesData.length} فواتير
+              </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>السابق</Button>
-                <Button variant="outline" size="sm" disabled>التالي</Button>
+                <Button variant="outline" size="sm" disabled={filteredSales.length === 0}>السابق</Button>
+                <Button variant="outline" size="sm" disabled={filteredSales.length === 0}>التالي</Button>
               </div>
             </div>
           </div>
