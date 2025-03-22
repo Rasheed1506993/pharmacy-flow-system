@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Form data
   const [formData, setFormData] = useState({
     pharmacyName: "",
     ownerName: "",
@@ -45,12 +43,10 @@ const Register = () => {
   
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // عند تغيير أي حقل، نزيل رسالة الخطأ إن وجدت
     if (errorMessage) setErrorMessage(null);
   };
   
   const handleNext = () => {
-    // التحقق من صحة البيانات قبل الانتقال للخطوة التالية
     if (step === 1) {
       if (!formData.pharmacyName || !formData.ownerName || !formData.licenseNumber || !formData.address || !formData.city) {
         toast({
@@ -93,12 +89,11 @@ const Register = () => {
   };
   
   const handlePrevious = () => {
-    // إزالة رسائل الخطأ عند الرجوع للخطوة السابقة
     if (errorMessage) setErrorMessage(null);
     if (step > 1) setStep(step - 1);
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
     if (!formData.acceptTerms) {
@@ -125,7 +120,6 @@ const Register = () => {
         }
       });
       
-      // 1. إنشاء حساب المستخدم
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -143,7 +137,6 @@ const Register = () => {
       if (authError) {
         console.error("خطأ في إنشاء الحساب:", authError);
         
-        // عرض رسالة خطأ مناسبة بناءً على نوع الخطأ
         if (authError.message.includes("already registered")) {
           setErrorMessage("البريد الإلكتروني مسجل بالفعل. الرجاء استخدام بريد إلكتروني آخر أو تسجيل الدخول.");
         } else if (authError.message.includes("Email signups are disabled")) {
@@ -164,8 +157,7 @@ const Register = () => {
       
       console.log("تم إنشاء الحساب بنجاح، جاري إنشاء ملف الصيدلية...");
       
-      // 2. إنشاء ملف شخصي للصيدلية
-      const { error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('pharmacy_profiles')
         .insert([
           {
@@ -178,17 +170,16 @@ const Register = () => {
             phone: formData.phone,
             employee_count: parseInt(formData.employeeCount) || 0
           }
-        ]);
+        ])
+        .select();
       
-      console.log("نتيجة إنشاء ملف الصيدلية:", { profileError });
+      console.log("نتيجة إنشاء ملف الصيدلية:", { profileData, profileError });
       
       if (profileError) {
         console.error("خطأ في إنشاء ملف الصيدلية:", profileError);
         
-        // مسح المستخدم إذا فشل إنشاء الملف الشخصي
         await supabase.auth.signOut();
         
-        // عرض رسالة خطأ مناسبة
         if (profileError.message.includes("duplicate key")) {
           setErrorMessage("ملف الصيدلية موجود بالفعل.");
         } else if (profileError.message.includes("violates row level security")) {
@@ -206,10 +197,8 @@ const Register = () => {
         description: "تم إنشاء حساب الصيدلية بنجاح، يمكنك الآن تسجيل الدخول.",
       });
       
-      // تسجيل الخروج بعد التسجيل (نظرًا لأن التحقق من البريد الإلكتروني قد يكون مطلوبًا)
       await supabase.auth.signOut();
       
-      // الانتقال إلى صفحة تسجيل الدخول
       navigate('/login');
       
     } catch (error: any) {
@@ -221,7 +210,6 @@ const Register = () => {
     }
   };
   
-  // Step indicators
   const steps = [
     { number: 1, label: "معلومات الصيدلية" },
     { number: 2, label: "معلومات الحساب" },
@@ -230,7 +218,6 @@ const Register = () => {
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-nova-50/50 to-white p-4 py-16">
-      {/* Background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-40 -left-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl opacity-40 animate-float"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-nova-100 rounded-full blur-3xl opacity-50 animate-pulse-slow"></div>
@@ -250,7 +237,6 @@ const Register = () => {
           <p className="text-gray-600" dir="rtl">أنشئ حساب صيدليتك وابدأ في إدارة أعمالك بشكل أفضل</p>
         </motion.div>
         
-        {/* Step indicators */}
         <div className="flex justify-center mb-8">
           <div className="relative flex items-center w-full max-w-md">
             {steps.map((s, i) => (
@@ -302,7 +288,6 @@ const Register = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent>
-              {/* عرض رسالة الخطأ إذا وجدت */}
               {errorMessage && (
                 <Alert variant="destructive" className="mb-4" dir="rtl">
                   <AlertTitle>خطأ في إنشاء الحساب</AlertTitle>
@@ -318,7 +303,6 @@ const Register = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  {/* Step 1: Pharmacy Info */}
                   {step === 1 && (
                     <div className="space-y-4" dir="rtl">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -393,7 +377,6 @@ const Register = () => {
                     </div>
                   )}
                   
-                  {/* Step 2: Account Info */}
                   {step === 2 && (
                     <div className="space-y-4" dir="rtl">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -467,7 +450,6 @@ const Register = () => {
                     </div>
                   )}
                   
-                  {/* Step 3: Confirmation */}
                   {step === 3 && (
                     <div className="space-y-6" dir="rtl">
                       <div className="rounded-lg bg-gray-50 p-4 border border-gray-100">

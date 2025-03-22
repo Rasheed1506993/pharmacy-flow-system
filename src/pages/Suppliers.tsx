@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -42,6 +43,7 @@ interface Supplier {
   email: string | null;
   address: string | null;
   created_at: string;
+  pharmacy_id: string | null;
 }
 
 // مخطط التحقق للنموذج
@@ -61,6 +63,7 @@ const Suppliers = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userPharmacyId, setUserPharmacyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<SupplierFormValues>({
@@ -74,9 +77,48 @@ const Suppliers = () => {
     },
   });
 
+  // جلب معرف صيدلية المستخدم
+  const fetchUserPharmacyId = async () => {
+    try {
+      const { data: pharmacyData, error: pharmacyError } = await supabase
+        .from("pharmacy_profiles")
+        .select("id")
+        .single();
+
+      if (pharmacyError) {
+        console.error("Error fetching pharmacy profile:", pharmacyError);
+        return null;
+      }
+
+      if (pharmacyData) {
+        setUserPharmacyId(pharmacyData.id);
+        return pharmacyData.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error in fetchUserPharmacyId:", error);
+      return null;
+    }
+  };
+
   // جلب الموردين عند تحميل الصفحة
   useEffect(() => {
-    fetchSuppliers();
+    const loadData = async () => {
+      const pharmacyId = await fetchUserPharmacyId();
+      if (pharmacyId) {
+        fetchSuppliers();
+      } else {
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+        });
+      }
+    };
+    
+    loadData();
   }, []);
 
   async function fetchSuppliers() {
@@ -130,6 +172,18 @@ const Suppliers = () => {
   // حفظ بيانات المورد (إضافة أو تعديل)
   async function onSubmit(values: SupplierFormValues) {
     try {
+      if (!userPharmacyId) {
+        const id = await fetchUserPharmacyId();
+        if (!id) {
+          toast({
+            variant: "destructive",
+            title: "خطأ",
+            description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+          });
+          return;
+        }
+      }
+
       if (selectedSupplier) {
         // تحديث مورد موجود
         const { error } = await supabase
@@ -151,6 +205,7 @@ const Suppliers = () => {
           phone: values.phone || null,
           email: values.email || null,
           address: values.address || null,
+          pharmacy_id: userPharmacyId
         };
         
         const { error } = await supabase

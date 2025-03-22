@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -41,6 +42,7 @@ interface Customer {
   email: string | null;
   address: string | null;
   created_at: string;
+  pharmacy_id: string | null;
 }
 
 // مخطط التحقق للنموذج
@@ -59,6 +61,7 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userPharmacyId, setUserPharmacyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<CustomerFormValues>({
@@ -71,9 +74,48 @@ const Customers = () => {
     },
   });
 
+  // جلب معرف صيدلية المستخدم
+  const fetchUserPharmacyId = async () => {
+    try {
+      const { data: pharmacyData, error: pharmacyError } = await supabase
+        .from("pharmacy_profiles")
+        .select("id")
+        .single();
+
+      if (pharmacyError) {
+        console.error("Error fetching pharmacy profile:", pharmacyError);
+        return null;
+      }
+
+      if (pharmacyData) {
+        setUserPharmacyId(pharmacyData.id);
+        return pharmacyData.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error in fetchUserPharmacyId:", error);
+      return null;
+    }
+  };
+
   // جلب العملاء عند تحميل الصفحة
   useEffect(() => {
-    fetchCustomers();
+    const loadData = async () => {
+      const pharmacyId = await fetchUserPharmacyId();
+      if (pharmacyId) {
+        fetchCustomers();
+      } else {
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+        });
+      }
+    };
+    
+    loadData();
   }, []);
 
   async function fetchCustomers() {
@@ -125,6 +167,18 @@ const Customers = () => {
   // حفظ بيانات العميل (إضافة أو تعديل)
   async function onSubmit(values: CustomerFormValues) {
     try {
+      if (!userPharmacyId) {
+        const id = await fetchUserPharmacyId();
+        if (!id) {
+          toast({
+            variant: "destructive",
+            title: "خطأ",
+            description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+          });
+          return;
+        }
+      }
+
       if (selectedCustomer) {
         // تحديث عميل موجود
         const { error } = await supabase
@@ -139,19 +193,23 @@ const Customers = () => {
           description: "تم تحديث بيانات العميل بنجاح",
         });
       } else {
-        // إضافة عميل جديد - ensure we're passing a valid object with required name
+        // إضافة عميل جديد - ensure we're passing a valid object with required name and pharmacy_id
         const customerData = {
-          name: values.name, // name is required
+          name: values.name,
           phone: values.phone || null,
           email: values.email || null,
           address: values.address || null,
+          pharmacy_id: userPharmacyId
         };
         
         const { error } = await supabase
           .from("customers")
           .insert([customerData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error details:", error);
+          throw error;
+        }
 
         toast({
           title: "تم إضافة العميل",

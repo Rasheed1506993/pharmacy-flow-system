@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -19,7 +20,6 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { 
   Form,
   FormControl,
@@ -47,6 +47,7 @@ interface Product {
   stock_quantity: number;
   min_stock_level: number;
   expiry_date: string | null;
+  pharmacy_id: string | null;
 }
 
 // مخطط التحقق للنموذج
@@ -71,6 +72,7 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userPharmacyId, setUserPharmacyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<ProductFormValues>({
@@ -89,9 +91,48 @@ const Products = () => {
     },
   });
 
+  // جلب معرف صيدلية المستخدم
+  const fetchUserPharmacyId = async () => {
+    try {
+      const { data: pharmacyData, error: pharmacyError } = await supabase
+        .from("pharmacy_profiles")
+        .select("id")
+        .single();
+
+      if (pharmacyError) {
+        console.error("Error fetching pharmacy profile:", pharmacyError);
+        return null;
+      }
+
+      if (pharmacyData) {
+        setUserPharmacyId(pharmacyData.id);
+        return pharmacyData.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error in fetchUserPharmacyId:", error);
+      return null;
+    }
+  };
+
   // جلب المنتجات عند تحميل الصفحة
   useEffect(() => {
-    fetchProducts();
+    const loadData = async () => {
+      const pharmacyId = await fetchUserPharmacyId();
+      if (pharmacyId) {
+        fetchProducts();
+      } else {
+        setLoading(false);
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+        });
+      }
+    };
+    
+    loadData();
   }, []);
 
   async function fetchProducts() {
@@ -155,6 +196,18 @@ const Products = () => {
   // حفظ بيانات المنتج (إضافة أو تعديل)
   async function onSubmit(values: ProductFormValues) {
     try {
+      if (!userPharmacyId) {
+        const id = await fetchUserPharmacyId();
+        if (!id) {
+          toast({
+            variant: "destructive",
+            title: "خطأ",
+            description: "تعذر العثور على معلومات الصيدلية. الرجاء تسجيل الدخول مرة أخرى.",
+          });
+          return;
+        }
+      }
+
       if (selectedProduct) {
         // تحديث منتج موجود
         const { error } = await supabase
@@ -181,6 +234,7 @@ const Products = () => {
           stock_quantity: values.stock_quantity,
           min_stock_level: values.min_stock_level,
           expiry_date: values.expiry_date || null,
+          pharmacy_id: userPharmacyId
         };
         
         const { error } = await supabase

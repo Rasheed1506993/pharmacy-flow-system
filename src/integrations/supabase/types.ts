@@ -16,6 +16,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          pharmacy_id: string | null
           phone: string | null
           updated_at: string
         }
@@ -25,6 +26,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          pharmacy_id?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -34,10 +36,19 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          pharmacy_id?: string | null
           phone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacy_profiles: {
         Row: {
@@ -93,6 +104,7 @@ export type Database = {
           manufacturer: string | null
           min_stock_level: number
           name: string
+          pharmacy_id: string | null
           price: number
           stock_quantity: number
           updated_at: string
@@ -108,6 +120,7 @@ export type Database = {
           manufacturer?: string | null
           min_stock_level?: number
           name: string
+          pharmacy_id?: string | null
           price: number
           stock_quantity?: number
           updated_at?: string
@@ -123,11 +136,20 @@ export type Database = {
           manufacturer?: string | null
           min_stock_level?: number
           name?: string
+          pharmacy_id?: string | null
           price?: number
           stock_quantity?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_items: {
         Row: {
@@ -180,6 +202,7 @@ export type Database = {
           id: string
           order_date: string
           order_number: string
+          pharmacy_id: string | null
           status: string | null
           supplier_id: string
           total_amount: number
@@ -190,6 +213,7 @@ export type Database = {
           id?: string
           order_date?: string
           order_number: string
+          pharmacy_id?: string | null
           status?: string | null
           supplier_id: string
           total_amount: number
@@ -200,12 +224,20 @@ export type Database = {
           id?: string
           order_date?: string
           order_number?: string
+          pharmacy_id?: string | null
           status?: string | null
           supplier_id?: string
           total_amount?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_orders_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -270,6 +302,7 @@ export type Database = {
           invoice_number: string
           payment_method: string | null
           payment_status: string | null
+          pharmacy_id: string | null
           sale_date: string
           total_amount: number
           updated_at: string
@@ -283,6 +316,7 @@ export type Database = {
           invoice_number: string
           payment_method?: string | null
           payment_status?: string | null
+          pharmacy_id?: string | null
           sale_date?: string
           total_amount: number
           updated_at?: string
@@ -296,6 +330,7 @@ export type Database = {
           invoice_number?: string
           payment_method?: string | null
           payment_status?: string | null
+          pharmacy_id?: string | null
           sale_date?: string
           total_amount?: number
           updated_at?: string
@@ -308,6 +343,13 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       suppliers: {
@@ -318,6 +360,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          pharmacy_id: string | null
           phone: string | null
           updated_at: string
         }
@@ -328,6 +371,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          pharmacy_id?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -338,17 +382,29 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          pharmacy_id?: string | null
           phone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_pharmacy_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
