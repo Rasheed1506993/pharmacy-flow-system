@@ -23,16 +23,20 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       refetchOnWindowFocus: false,
-      // Global error handler for React Query
-      onError: (error) => {
-        console.error('Query error:', error);
-      },
+      meta: {
+        // Global error handler for React Query
+        errorHandler: (error: any) => {
+          console.error('Query error:', error);
+        }
+      }
     },
     mutations: {
       // Global error handler for mutations
-      onError: (error) => {
-        console.error('Mutation error:', error);
-      },
+      meta: {
+        errorHandler: (error: any) => {
+          console.error('Mutation error:', error);
+        }
+      }
     },
   },
 });

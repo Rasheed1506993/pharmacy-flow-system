@@ -31,13 +31,15 @@ export const useProducts = () => {
     queryFn: () => fetchProducts(pharmacyId),
     enabled: !!pharmacyId && !profileLoading,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    onError: (error) => {
-      console.error('Error fetching products:', error);
-      toast({
-        title: "خطأ في جلب البيانات",
-        description: "حدث خطأ أثناء جلب بيانات المنتجات. يرجى المحاولة مرة أخرى.",
-        variant: "destructive",
-      });
+    meta: {
+      errorHandler: (error: any) => {
+        console.error('Error fetching products:', error);
+        toast({
+          title: "خطأ في جلب البيانات",
+          description: "حدث خطأ أثناء جلب بيانات المنتجات. يرجى المحاولة مرة أخرى.",
+          variant: "destructive",
+        });
+      }
     }
   });
 

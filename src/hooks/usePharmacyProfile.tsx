@@ -32,13 +32,15 @@ export const usePharmacyProfile = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: true,
-    onError: (error) => {
-      console.error('Error fetching pharmacy profile:', error);
-      toast({
-        title: "خطأ في تحميل بيانات الصيدلية",
-        description: "لم نتمكن من تحميل بيانات الصيدلية. يرجى المحاولة مرة أخرى.",
-        variant: "destructive",
-      });
+    meta: {
+      errorHandler: (error: any) => {
+        console.error('Error fetching pharmacy profile:', error);
+        toast({
+          title: "خطأ في تحميل بيانات الصيدلية",
+          description: "لم نتمكن من تحميل بيانات الصيدلية. يرجى المحاولة مرة أخرى.",
+          variant: "destructive",
+        });
+      }
     }
   });
 

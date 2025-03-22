@@ -22,19 +22,24 @@ export interface UserProfileFormData {
 
 export const settingsService = {
   updatePharmacyProfile: async (id: string, data: PharmacyProfileFormData) => {
-    const { data: updatedData, error } = await supabase
-      .from('pharmacy_profiles')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single();
+    try {
+      const { data: updatedData, error } = await supabase
+        .from('pharmacy_profiles')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error updating pharmacy profile:', error);
+        throw error;
+      }
       
-    if (error) {
-      console.error('Error updating pharmacy profile:', error);
+      return updatedData;
+    } catch (error) {
+      console.error('Error in updatePharmacyProfile:', error);
       throw error;
     }
-    
-    return updatedData;
   },
   
   updateUserProfile: async (data: UserProfileFormData) => {
