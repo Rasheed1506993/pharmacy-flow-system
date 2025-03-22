@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -17,11 +17,22 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// Create a query client with enhanced error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: 2,
       refetchOnWindowFocus: false,
+      // Global error handler for React Query
+      onError: (error) => {
+        console.error('Query error:', error);
+      },
+    },
+    mutations: {
+      // Global error handler for mutations
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      },
     },
   },
 });
